@@ -1,0 +1,41 @@
+- name: Disable swap
+  command: swapoff -a
+
+- name: Comment out swap in fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].* swap .*)$'
+    replace: '# \1'
+
+- name: Install required packages
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: yes
+
+- name: Ensure kernel modules for Kubernetes
+  copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      br_netfilter
+      overlay
+  notify: Load Kernel Modules
+
+- name: Ensure sysctl settings for k8s networking
+  copy:
+    dest: /etc/sysctl.d/99-kubernetes-cri.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward = 1
+
+
+- name: Apply sysctl settings
+  command: sysctl --system
+      
+

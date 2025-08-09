@@ -1,0 +1,22 @@
+- name: Run pre-requisites
+  include_tasks: pre-reqs.yml
+
+- name: Install containerd
+  include_tasks: containerd.yml
+
+- name: Cleanup existing repo
+  include_tasks: cleanup-repo.yml
+
+- name: Allow ports
+  include_tasks: ufw.yml
+
+- name: Install kubeadm, kubelet, kubectl
+  include_tasks: kubernetes.yml
+
+- name: Init Master Node
+  when: inventory_hostname in groups['master']
+  include_tasks: master-init.yml
+
+- name: Init Worker Node
+  when: inventory_hostname in groups['workers']
+  include_tasks: join-workers.yml

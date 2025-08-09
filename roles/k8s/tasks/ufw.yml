@@ -1,0 +1,23 @@
+- name: Ensure UFW is installed
+  apt:
+    name: ufw
+    state: present
+
+- name: Allow k8s control plane ports
+  ufw:
+    rule: allow
+    port: "6443,2379:2380,10250,10259,10257"
+    proto: tcp
+
+- name: Allow k8s worker ports
+  ufw:
+    rule: allow
+    port: "10250,30000:32767"
+    proto: tcp
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+    policy: allow
+    direction: incoming
+    logging: on

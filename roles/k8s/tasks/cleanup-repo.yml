@@ -1,0 +1,4 @@
+- name: Remove broken k8s APT repo file if it exists
+  file:
+    path: /etc/apt/sources.list.d/apt_kubernetes_io_kubernetes_xenial.list
+    state: absent

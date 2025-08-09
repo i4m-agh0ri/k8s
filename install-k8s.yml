@@ -1,0 +1,5 @@
+- name: K8S Cluster Setup
+  hosts: k8s
+  become: True
+  roles:
+    - k8s

@@ -1,0 +1,15 @@
+- name: Install containerd
+  apt:
+    name: containerd
+    state: present
+
+- name: Configure containerd
+  shell: |
+    mkdir -p /etc/containerd
+    containerd config default > /etc/containerd/config.toml
+
+- name: Restart containerd
+  systemd:
+    name: containerd
+    enabled: yes
+    state: restarted

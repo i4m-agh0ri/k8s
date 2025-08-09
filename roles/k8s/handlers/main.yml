@@ -1,0 +1,4 @@
+- name: Load Kernel Modules
+  shell: |
+    modprobe br_netfilter || true
+    modprobe overlay || true

@@ -1,0 +1,90 @@
+- name: Remove any old/broken k8s repo files
+  ansible.builtin.find:
+    paths: /etc/apt/sources.list.d
+    patterns:
+      - "*kubernetes*.list"
+      - "pkgs.k8s.io*.list"
+  register: old_k8s_lists
+
+- name: Delete old k8s repo list files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_k8s_lists.files | default([]) }}"
+  when: old_k8s_lists.matched | default(0) | int > 0
+
+- name: Find legacy k8s keyrings in /etc/apt/trusted.gpg.d
+  ansible.builtin.find:
+    paths: /etc/apt/trusted.gpg.d
+    patterns:
+      - "*kubernetes*"
+      - "*pkgs.k8s.io*"
+    file_type: file
+  register: legacy_trusted_gpg
+  failed_when: false
+
+- name: Remove legacy key files from /etc/apt/trusted.gpg.d
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ legacy_trusted_gpg.files | default([]) }}"
+  when: legacy_trusted_gpg.matched | default(0) | int > 0
+
+- name: Remove old keyring if present
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    state: absent
+
+- name: Ensure apt transport & deps
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: yes
+
+- name: Ensure keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download and dearmor Kubernetes Release.key
+  ansible.builtin.shell: |
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+- name: Set keyring permission
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    mode: '0644'
+
+- name: Add k8s repo
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /"
+    state: present
+    filename: kubernetes
+
+- name: apt update after repo add
+  apt:
+    update_cache: yes
+
+- name: Install kubelet, kubeadm, kubectl
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+
+- name: Hold k8s packages
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: fixed 
+

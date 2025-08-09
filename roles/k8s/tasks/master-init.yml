@@ -1,0 +1,16 @@
+- name: Init master
+  shell: kubeadm init --pod-network-cidr=10.244.0.0/16
+  register: master_init_output
+  args:
+    creates: /etc/kubernetes/admin.conf
+
+- name: Save join command
+  shell: |
+    kubeadm token create --print-join-command > /tmp/k8s_join_cmd.sh
+  when: master_init_output.changed
+
+- name: Setup kubeconfig
+  shell: |
+    mkdir -p $HOME/.kube
+    cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    chown $(id -u):$(id -g) $HOME/.kube/config
